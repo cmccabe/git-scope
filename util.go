@@ -15,23 +15,28 @@
 package main
 
 import (
-	"fmt"
-	"gopkg.in/alecthomas/kingpin.v2"
-	"os"
+	"sort"
+	"strings"
 )
 
-func main() {
-	app := kingpin.New("git-scope", "git branch comparison tool")
-	app.HelpFlag.Short('h')
-	diff := app.Command("diff", "Show the differences between two branches.")
-	branches := diff.Arg("branch", "branches to examine").Strings()
-
-	switch (kingpin.MustParse(app.Parse(os.Args[1:]))) {
-	case "diff":
-		err := doDiff(os.Stdout, *branches)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			os.Exit(1)
-		}
+func GetFirstLineOfString(input string) string {
+	i := strings.Index(input, "\n")
+	if i < 0 {
+		return input
 	}
+	return input[:i]
+}
+
+func FindDuplicate(input []string) *string {
+	sortedBranchNames := make([]string, len(input))
+	copy(sortedBranchNames, input)
+	sort.Strings(sortedBranchNames)
+	prev := sortedBranchNames[0]
+	for i := 1; i < len(sortedBranchNames); i++ {
+		if prev == sortedBranchNames[i] {
+			return &prev
+		}
+		prev = sortedBranchNames[i]
+	}
+	return nil
 }
