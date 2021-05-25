@@ -24,12 +24,12 @@ func main() {
 	app := kingpin.New("git-scope", "git branch comparison tool")
 	app.HelpFlag.Short('h')
 	diff := app.Command("diff", "Show the differences between two branches.")
-	srcBranch := diff.Arg("src", "Source branch").Required()
-	dstBranch := diff.Arg("dest", "Destination branch").Required()
+	srcBranch := diff.Arg("src", "Source branch").Required().String()
+	dstBranch := diff.Arg("dest", "Destination branch").Required().String()
 
 	switch (kingpin.MustParse(app.Parse(os.Args[1:]))) {
 	case "diff":
-		err := doDiff(os.Stdout, *srcBranch.String(), *dstBranch.String())
+		err := doDiff(os.Stdout, *srcBranch, *dstBranch)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)

@@ -19,13 +19,20 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"io"
-	"os"
 	"strings"
 )
 
 type ScopeBranch struct {
-	name    string
-	commits map[string]ScopeCommit
+	name                  string
+	descriptionsToCommits map[string]*ScopeCommit
+	commits               []*ScopeCommit
+}
+
+func (scopeBranch *ScopeBranch) PrintAllCommits(out io.Writer) {
+	for i := range scopeBranch.commits {
+		commit := scopeBranch.commits[i]
+		fmt.Fprintf(out, "%s\t%s\n", commit.hash, commit.firstLine)
+	}
 }
 
 func newScopeBranch(branchName string, repo *git.Repository) (*ScopeBranch, error) {
@@ -43,7 +50,8 @@ func newScopeBranch(branchName string, repo *git.Repository) (*ScopeBranch, erro
 	}
 	defer commitIter.Close()
 	scopeBranch := &ScopeBranch{name: branchName,
-		commits: make(map[string]ScopeCommit)}
+		descriptionsToCommits: make(map[string]*ScopeCommit),
+		commits:               make([]*ScopeCommit, 0)}
 	for {
 		commit, err := commitIter.Next()
 		if err == io.EOF {
@@ -52,7 +60,9 @@ func newScopeBranch(branchName string, repo *git.Repository) (*ScopeBranch, erro
 			return nil, fmt.Errorf("Error while iterating through git commits: %s", err.Error())
 		}
 		firstLine := getFirstLine(commit.Message)
-		scopeBranch.commits[firstLine] = ScopeCommit{firstLine: firstLine, hash: commit.Hash}
+		scopeCommit := &ScopeCommit{firstLine: firstLine, hash: commit.Hash}
+		scopeBranch.descriptionsToCommits[firstLine] = scopeCommit
+		scopeBranch.commits = append(scopeBranch.commits, scopeCommit)
 	}
 	return scopeBranch, nil
 }
@@ -70,21 +80,28 @@ type ScopeCommit struct {
 	hash      plumbing.Hash
 }
 
-func doDiff(out *os.File, srcBranchName string, dstBranchName string) error {
+func doDiff(out io.Writer, srcBranchName string, dstBranchName string) error {
 	repo, err := git.PlainOpen(".")
 	if err != nil {
 		return fmt.Errorf("Unable to open git repository in current directory: %s",
 			err.Error())
 	}
-	_, err = newScopeBranch(srcBranchName, repo)
+
+	srcBranch, err := newScopeBranch(srcBranchName, repo)
 	if err != nil {
 		return fmt.Errorf("Unable to create scope branch for source branch %s: %s",
 			srcBranchName, err.Error())
 	}
-	_, err = newScopeBranch(dstBranchName, repo)
+	fmt.Fprintf(out, "** srcBranch\n")
+	srcBranch.PrintAllCommits(out)
+
+	dstBranch, err := newScopeBranch(dstBranchName, repo)
 	if err != nil {
 		return fmt.Errorf("Unable to create scope branch for destination branch %s: %s",
 			srcBranchName, err.Error())
 	}
+	fmt.Fprintf(out, "** dstBranch\n")
+	dstBranch.PrintAllCommits(out)
+
 	return nil
 }
