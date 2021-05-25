@@ -16,17 +16,23 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
 )
-	//"github.com/go-git/go-git"
 
 func main() {
-	// Clone the given repository to the given directory
-	fmt.Printf("git clone https://github.com/go-git/go-git")
+	app := kingpin.New("git-scope", "git branch comparison tool")
+	app.HelpFlag.Short('h')
+	diff := app.Command("diff", "Show the differences between two branches.")
+	srcBranch := diff.Arg("src", "Source branch").Required()
+	dstBranch := diff.Arg("dest", "Destination branch").Required()
 
-//	_, err := git.PlainClone("/tmp/foo", false, &git.CloneOptions{
-//	URL:      "https://github.com/go-git/go-git",
-//		Progress: os.Stdout,
-//	})
-//
-//	CheckIfError(err)
+	switch (kingpin.MustParse(app.Parse(os.Args[1:]))) {
+	case "diff":
+		err := doDiff(os.Stdout, *srcBranch.String(), *dstBranch.String())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+	}
 }
