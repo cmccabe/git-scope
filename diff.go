@@ -19,7 +19,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"io"
-	"os"
 )
 
 type ScopeCommit struct {
@@ -42,7 +41,6 @@ func newScopeBranch(branchName string, repo *git.Repository) (*ScopeBranch, erro
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve revision for %s: %s", branchName, err.Error())
 	}
-	fmt.Printf("WATERMELON1: branchName = %s, resolving revision to %s\n", branchName, startHash)
 	commitIter, err := repo.Log(&git.LogOptions{From: *startHash})
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get git log for git repository in current directory: %s", err.Error())
@@ -96,9 +94,6 @@ func createDiff(repo *git.Repository, branchNames []string) (*ScopeBranchDiff, e
 			return nil, fmt.Errorf("Unable to create scope branch for source branch %s: %s",
 				branchNames[i], err.Error())
 		}
-		fmt.Printf("===== %s\n", branches[i].name)
-		branches[i].Print(os.Stderr)
-		fmt.Printf("=====\n")
 	}
 	findCommit := func(curBranchIndex int, commit *ScopeCommit) bool {
 		for i := 0; i < curBranchIndex; i++ {
@@ -115,10 +110,7 @@ func createDiff(repo *git.Repository, branchNames []string) (*ScopeBranchDiff, e
 		scopeBranch := branches[i]
 		for j := range scopeBranch.commits {
 			commit := scopeBranch.commits[j]
-			if findCommit(i, commit) {
-				//fmt.Printf("i = %d, branch = %s, Found commit %s in a previous scopeBranch\n", i, scopeBranch.name, commit)
-			} else {
-				//fmt.Printf("i = %d, branch = %s, Did not find commit %s in a previous scopeBranch\n", i, scopeBranch.name, commit)
+			if !findCommit(i, commit) {
 				diffCommit := &ScopeBranchDiffCommit{ScopeCommit: commit, branches: make([]string, 1)}
 				diffCommit.branches[0] = scopeBranch.name
 				for k := i + 1; k < len(branches); k++ {
@@ -163,63 +155,3 @@ func doDiff(out io.Writer, branchNames []string) error {
 	diff.Print(out)
 	return nil
 }
-
-//	func (scopeBranch *ScopeBranch) Diff(otherBranch *ScopeBranch) *ScopeBranchDiff {
-//		i := 0
-//		scopeBranchCommitsLen := len(scopeBranch.commits)
-//		otherBranchCommitsLen := len(otherBranch.commits)
-//		diff := &ScopeBranchDiff{commits: make([]*ScopeBranchDiffCommit, 0)}
-//		for {
-//		numProcessed := 0
-//		if i < scopeBranchCommitsLen {
-//		numProcessed++
-//		commit := scopeBranch.commits[i]
-//		otherCommit := otherBranch.descriptionsToCommits[commit.firstLine]
-//		if otherCommit == nil {
-//		diff.commits = append(diff.commits,
-//		&ScopeBranchDiffCommit{commit, []string{otherBranch.name}})
-//	}
-//	}
-//		if i < otherBranchCommitsLen {
-//		numProcessed++
-//		otherCommit := otherBranch.commits[i]
-//		commit := scopeBranch.descriptionsToCommits[otherCommit.firstLine]
-//		if commit == nil {
-//		diff.commits = append(diff.commits,
-//		&ScopeBranchDiffCommit{otherCommit, []string{scopeBranch.name}})
-//	} else {
-//		fmt.Printf("WATERMELON1: %s matches %s\n", otherCommit.String(), commit)
-//	}
-//	}
-//		if numProcessed == 0 {
-//		break
-//	}
-//		i++
-//	}
-//		return diff
-//	}
-
-//		func newScopeBranch(branchName string, repo *git.Repository) (*ScopeBranch, error) {
-//
-//	srcBranch, err := newScopeBranch(srcBranchName, repo)
-//	if err != nil {
-//		return fmt.Errorf("Unable to create scope branch for source branch %s: %s",
-//			srcBranchName, err.Error())
-//	}
-//	fmt.Fprintf(out, "** srcBranch\n")
-//	srcBranch.Print(out)
-//
-//	dstBranch, err := newScopeBranch(dstBranchName, repo)
-//	if err != nil {
-//		return fmt.Errorf("Unable to create scope branch for destination branch %s: %s",
-//			dstBranchName, err.Error())
-//	}
-//	fmt.Fprintf(out, "** dstBranch\n")
-//	dstBranch.Print(out)
-//
-//	fmt.Fprintf(out, "** diff\n")
-//	diff := dstBranch.Diff(srcBranch)
-//	diff.Print(out)
-//
-//	return nil
-//}
