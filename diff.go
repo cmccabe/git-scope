@@ -19,6 +19,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"io"
+	"os"
 )
 
 type ScopeCommit struct {
@@ -37,11 +38,6 @@ type ScopeBranch struct {
 }
 
 func newScopeBranch(branchName string, repo *git.Repository) (*ScopeBranch, error) {
-//	gitBranch, err := repo.Branch(branchName)
-//	if err != nil {
-//		return nil, fmt.Errorf("Unable to access branch %s: %s", branchName, err.Error())
-//	}
-//	startHash, err := repo.ResolveRevision(plumbing.Revision(gitBranch.Merge))
 	startHash, err := repo.ResolveRevision(plumbing.Revision(branchName))
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve revision for %s: %s", branchName, err.Error())
@@ -100,15 +96,18 @@ func createDiff(repo *git.Repository, branchNames []string) (*ScopeBranchDiff, e
 			return nil, fmt.Errorf("Unable to create scope branch for source branch %s: %s",
 				branchNames[i], err.Error())
 		}
+		fmt.Printf("===== %s\n", branches[i].name)
+		branches[i].Print(os.Stderr)
+		fmt.Printf("=====\n")
 	}
 	findCommit := func(curBranchIndex int, commit *ScopeCommit) bool {
 		for i := 0; i < curBranchIndex; i++ {
 			_, ok := branches[i].firstLinesToCommits[commit.firstLine]
 			if ok {
-				return false
+				return true
 			}
 		}
-		return true
+		return false
 	}
 	diff := &ScopeBranchDiff{branches: make([]string, len(branchNames)), commits: make([]*ScopeBranchDiffCommit, 0)}
 	copy(diff.branches, branchNames)
@@ -117,9 +116,9 @@ func createDiff(repo *git.Repository, branchNames []string) (*ScopeBranchDiff, e
 		for j := range scopeBranch.commits {
 			commit := scopeBranch.commits[j]
 			if findCommit(i, commit) {
-				fmt.Printf("Found commit %s in a previous scopeBranch\n", commit)
+				//fmt.Printf("i = %d, branch = %s, Found commit %s in a previous scopeBranch\n", i, scopeBranch.name, commit)
 			} else {
-				fmt.Printf("Did not find commit %s in a previous scopeBranch\n", commit)
+				//fmt.Printf("i = %d, branch = %s, Did not find commit %s in a previous scopeBranch\n", i, scopeBranch.name, commit)
 				diffCommit := &ScopeBranchDiffCommit{ScopeCommit: commit, branches: make([]string, 1)}
 				diffCommit.branches[0] = scopeBranch.name
 				for k := i + 1; k < len(branches); k++ {
@@ -128,7 +127,9 @@ func createDiff(repo *git.Repository, branchNames []string) (*ScopeBranchDiff, e
 						diffCommit.branches = append(diffCommit.branches, branches[k].name)
 					}
 				}
-				diff.commits = append(diff.commits, diffCommit)
+				if len(diffCommit.branches) < len(diff.branches) {
+					diff.commits = append(diff.commits, diffCommit)
+				}
 			}
 		}
 	}
