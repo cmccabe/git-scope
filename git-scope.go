@@ -25,10 +25,17 @@ func main() {
 	app.HelpFlag.Short('h')
 	diff := app.Command("diff", "Show the differences between two branches.")
 	branches := diff.Arg("branch", "branches to examine").Strings()
+	app.Command("extras", "Show extra branches which are present locally but not remotely.")
 
 	switch (kingpin.MustParse(app.Parse(os.Args[1:]))) {
 	case "diff":
 		err := doDiff(os.Stdout, *branches)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+	case "extras":
+		err := doExtras(os.Stdout)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)

@@ -12,8 +12,8 @@
 
 all: git-scope
 
-git-scope:
-	go build *.go
+git-scope: git-scope.go diff.go extras.go util.go
+	go build git-scope.go diff.go extras.go util.go
 
 clean:
 	rm -f git-scope
